@@ -46,64 +46,92 @@ namespace Benchmarks
         }
 
         [Benchmark]
-        public List<Timekeeper> QueryT() => service.Query<Timekeeper>("").ToList();
+        public List<TimekeeperProps> QueryTProps() => service.Query<TimekeeperProps>("").ToList();
+
+
+        [Benchmark]
+        public List<TimekeeperCtor> QueryTCtor() => service.Query<TimekeeperCtor>("").ToList();
 
         [Benchmark(Baseline = true)]
-        public List<Benchmarks.TestData.Deserialize.Timekeeper> XmlSerializer()
+        public List<Benchmarks.TestData.Deserialize.Timekeeper> XmlSerializerImpl()
         {
-            //var serializer = new XmlSerializer(typeof(List<Benchmarks.TestData.Deserialize.Timekeeper>), new XmlRootAttribute("Data"));
             using (var stringReader = new StringReader(xml))
             using (var xmlReader = XmlReader.Create(stringReader))
             {
                 var result = (List<Benchmarks.TestData.Deserialize.Timekeeper>)serializer.Deserialize(xmlReader);
                 return result;
             }
-        }
+            //}
 
-        [Benchmark]
-        public List<Benchmarks.TestData.Deserialize.Timekeeper> XmlSerializerStringReader()
-        {
-            //var serializer = new XmlSerializer(typeof(List<Benchmarks.TestData.Deserialize.Timekeeper>), new XmlRootAttribute("Data"));
-            using (var stringReader = new StringReader(xml))
-            {
-                var result = (List<Benchmarks.TestData.Deserialize.Timekeeper>)serializer.Deserialize(stringReader);
-                return result;
-            }
-        }
+            //[Benchmark]
+            //public List<Benchmarks.TestData.Deserialize.Timekeeper> XmlSerializerStringReader()
+            //{
+            //    using (var stringReader = new StringReader(xml))
+            //    {
+            //        var result = (List<Benchmarks.TestData.Deserialize.Timekeeper>)serializer.Deserialize(stringReader);
+            //        return result;
+            //    }
+            //}
 
-        [Benchmark]
-        public List<Timekeeper> XDocument()
-        {
-            var doc = System.Xml.Linq.XDocument.Parse(xml);
-            var rows = doc.Root.Elements();
+            //[Benchmark]
+            //public List<TimekeeperProps> XDocumentImpl()
+            //{
+            //    var doc = XDocument.Parse(xml);
+            //    var rows = doc.Root.Elements();
 
-            var tks = rows.Select(r => new Timekeeper
-            {
-                Name = r.Element("Name").Value,
-                Age = int.Parse(r.Element("Age").Value),
-                DateOfBirth = ParseDateOfBirth(r.Element("DateOfBirth").Value),
-                MatterNumber = ParseMatterNumber(r.Element("MatterNumber").Value)
-            });
+            //    var tks = rows.Select(r => new TimekeeperProps
+            //    {
+            //        Name = r.Element("Name").Value,
+            //        Age = int.Parse(r.Element("Age").Value),
+            //        DateOfBirth = ParseDateOfBirth(r.Element("DateOfBirth").Value),
+            //        MatterNumber = ParseMatterNumber(r.Element("MatterNumber").Value)
+            //    });
 
-            DateTime? ParseDateOfBirth(string value)
-            {
-                if (DateTime.TryParse(value, out var result))
-                {
-                    return result;
-                }
-                return null;
-            }
+            //    return tks.ToList();
+            //}
 
-            MatterNumber ParseMatterNumber(string value)
-            {
-                if (!string.IsNullOrEmpty(value))
-                {
-                    return new MatterNumber(value);
-                }
-                return null;
-            }
+            //DateTime? ParseDateOfBirth(string value)
+            //{
+            //    if (DateTime.TryParse(value, out var result))
+            //    {
+            //        return result;
+            //    }
+            //    return null;
+            //}
 
-            return tks.ToList();
+            //MatterNumber ParseMatterNumber(string value)
+            //{
+            //    if (!string.IsNullOrEmpty(value))
+            //    {
+            //        return new MatterNumber(value);
+            //    }
+            //    return null;
+            //}
+
+            //[Benchmark]
+            //public List<TimekeeperProps> XmlReaderImpl()
+            //{
+            //    return Parse().ToList();
+
+            //    IEnumerable<TimekeeperProps> Parse()
+            //    {
+            //        using var reader = XmlReader.Create(new StringReader(xml), new XmlReaderSettings { IgnoreWhitespace = true });
+
+            //        reader.ReadToFollowing("Data");
+
+            //        while (reader.ReadToFollowing("Timekeeper"))
+            //        {
+            //            var timekeeper = new TimekeeperProps();
+
+            //            reader.Read();
+            //            timekeeper.Name = reader.ReadInnerXml();
+            //            timekeeper.Age = int.Parse(reader.ReadInnerXml());
+            //            timekeeper.DateOfBirth = ParseDateOfBirth(reader.ReadInnerXml());
+            //            timekeeper.MatterNumber = ParseMatterNumber(reader.ReadInnerXml());
+
+            //            yield return timekeeper;
+            //        }
+            //    }
         }
     }
 
@@ -111,7 +139,7 @@ namespace Benchmarks
     {
         public static void Main(string[] args)
         {
-            //var result = new TransactionSerivceExtensionsBenchmarks().XDocument();
+            //var result = new TransactionSerivceExtensionsBenchmarks().XmlReaderImpl();
             var summary = BenchmarkRunner.Run<TransactionSerivceExtensionsBenchmarks>();
         }
     }
@@ -134,10 +162,10 @@ namespace Benchmarks
         }
 
 
-        static List<Timekeeper> GenerateData(int size)
+        static List<TimekeeperProps> GenerateData(int size)
         {
             var random = new Random();
-            return Enumerable.Range(0, size).Select(i => new Timekeeper
+            return Enumerable.Range(0, size).Select(i => new TimekeeperProps
             {
                 Name = Guid.NewGuid().ToString(),
                 Age = random.Next(),
@@ -177,8 +205,33 @@ namespace Benchmarks
         public string GetArchetypeData(string queryXml) => xml;
     }
 
-    public class Timekeeper
+    public class TimekeeperProps
     {
+        public string Name { get; set; }
+
+        public int Age { get; set; }
+
+        public DateTime? DateOfBirth { get; set; }
+
+        public MatterNumber MatterNumber { get; set; }
+
+        public override string ToString() =>
+            $"Name; {Name}, " +
+            $"Age: {Age}, " +
+            $"Date of birth: {DateOfBirth}, " +
+            $"Matter number: {MatterNumber}";
+    }
+
+    public class TimekeeperCtor
+    {
+        public TimekeeperCtor(string name, int age, DateTime? dateOfBirth, MatterNumber matterNumber)
+        {
+            Name = name ?? throw new ArgumentNullException(nameof(name));
+            Age = age;
+            DateOfBirth = dateOfBirth;
+            MatterNumber = matterNumber;
+        }
+
         public string Name { get; set; }
 
         public int Age { get; set; }
@@ -201,7 +254,7 @@ namespace Benchmarks
 
         public MatterNumber(string s)
         {
-            this.s = s;
+            this.s = s ?? throw new ArgumentNullException(nameof(s));
         }
 
         public override string ToString() => s;
@@ -226,7 +279,7 @@ namespace Benchmarks
 
         public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
         {
-            return new MatterNumber(value as string);
+            return  value is null ? null : new MatterNumber(value as string);
         }
     }
 }
