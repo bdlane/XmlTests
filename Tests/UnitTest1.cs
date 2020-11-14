@@ -8,16 +8,19 @@ using System.Xml.Serialization;
 using Tests.TestData;
 using TransactionServiceExtensions;
 using Xunit;
+using FluentAssertions;
 
 namespace Tests
 {
     public class UnitTest1
     {
+        // Handling empty string - is it null? or empty string? no way to tell.
+        // Null reference types - type converter, return null?
         [Fact]
-        public void Test1()
+        public void Properties()
         {
             // Arrange
-            var data = GenerateData(1000);
+            var data = GenerateData(3);
 
             var serializable = data.Select(t => new TestData.Timekeeper
             {
@@ -32,17 +35,42 @@ namespace Tests
             var service = new MockTransactionService(xml);
 
             // Act
-            var actual = service.Query<Timekeeper>("").ToList();
+            var actual = service.Query<TimekeeperProp>("").ToList();
 
             // Assert
-            Assert.Equal(data.Count(), actual.Count());
+            actual.Should().BeEquivalentTo(data);
+        }
+
+        [Fact]
+        public void Constructor()
+        {
+            // Arrange
+            var data = GenerateData(3);
+
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                Name = t.Name,
+                Age = t.Age,
+                DateOfBirth = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? "",
+                MatterNumber = t.MatterNumber?.ToString() ?? ""
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query<TimekeeperCtor>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(data);
         }
 
 
-        static List<Timekeeper> GenerateData(int size)
+        static List<TimekeeperProp> GenerateData(int size)
         {
             var random = new Random();
-            return Enumerable.Range(0, size).Select(i => new Timekeeper
+            return Enumerable.Range(0, size).Select(i => new TimekeeperProp
             {
                 Name = Guid.NewGuid().ToString(),
                 Age = random.Next(),
@@ -81,7 +109,7 @@ namespace Tests
         public string GetArchetypeData(string queryXml) => xml;
     }
 
-    public class Timekeeper
+    public class TimekeeperProp
     {
         public string Name { get; set; }
 
@@ -98,6 +126,31 @@ namespace Tests
             $"Matter number: {MatterNumber}";
     }
 
+    public class TimekeeperCtor
+    {
+        public TimekeeperCtor(string name, int age, DateTime? dateOfBirth, MatterNumber matterNumber)
+        {
+            Name = name ?? throw new ArgumentNullException(nameof(name));
+            Age = age;
+            DateOfBirth = dateOfBirth;
+            MatterNumber = matterNumber;
+        }
+
+        public string Name { get; }
+
+        public int Age { get; }
+
+        public DateTime? DateOfBirth { get; }
+
+        public MatterNumber MatterNumber { get; }
+
+        public override string ToString() =>
+            $"Name; {Name}, " +
+            $"Age: {Age}, " +
+            $"Date of birth: {DateOfBirth}, " +
+            $"Matter number: {MatterNumber}";
+    }
+
     [TypeConverter(typeof(MatterNumberTypeConverter))]
     public class MatterNumber
     {
@@ -105,7 +158,7 @@ namespace Tests
 
         public MatterNumber(string s)
         {
-            this.s = s;
+            this.s = s ?? throw new ArgumentNullException(nameof(s));
         }
 
         public override string ToString() => s;
@@ -130,7 +183,7 @@ namespace Tests
 
         public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
         {
-            return new MatterNumber(value as string);
+            return value is string s ? new MatterNumber(s) : null;
         }
     }
 }

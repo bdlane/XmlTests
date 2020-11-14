@@ -16,56 +16,50 @@ namespace TransactionServiceExtensions
         {
             var result = service.GetArchetypeData(queryXml);
             var doc = XDocument.Parse(result);
-            // yield break;
             var rows = doc.Root.Elements();
-
-            var fields = rows.First().Elements().ToDictionary(e => e.Name.LocalName, e => e.Value);
-
-            T obj;
 
             var ctor = typeof(T).GetConstructors().FirstOrDefault();
 
             if (ctor.GetParameters().Any())
             {
+                var ctorParams = ctor.GetParameters();
+
                 foreach (var row in rows)
                 {
-                    var ctorParams = ctor.GetParameters();
-
-                    var paramValues = fields.Select(f =>
+                    var values = ctorParams.Select(p =>
                     {
-                        var paramInfo = ctorParams
-                            .Where(p => p.Name.Equals(f.Key, StringComparison.OrdinalIgnoreCase))
-                            .Single();
+                        var raw = row.Elements().Single(e => e.Name.LocalName.Equals(p.Name, StringComparison.OrdinalIgnoreCase)).Value;
+                        raw = raw == "" ? null : raw;
 
-                        var converter = TypeDescriptor.GetConverter(paramInfo.ParameterType);
-                        var value = converter.ConvertFromInvariantString(f.Value);
-                        
+                        var converter = TypeDescriptor.GetConverter(p.ParameterType);
+                        var value = converter.ConvertFromInvariantString(raw);
+
                         return value;
                     });
 
-                    obj = (T)ctor.Invoke(paramValues.ToArray());
+                    var obj = (T)ctor.Invoke(values.ToArray());
                     yield return obj;
                 }
             }
             else
             {
+                var fields = rows.First().Elements().ToDictionary(e => e.Name.LocalName, e => e.Value);
                 foreach (var row in rows)
                 {
-                    obj = Activator.CreateInstance<T>();
+                    var obj = Activator.CreateInstance<T>();
 
                     foreach (var field in fields)
                     {
                         propInfo.TryGetValue(field.Key, out var prop);
 
-                        prop =  typeof(T).GetProperty(field.Key);
+                        prop = typeof(T).GetProperty(field.Key);
 
                         var propType = prop.PropertyType;
 
                         var converter = TypeDescriptor.GetConverter(propType);
 
                         var rowValue = row.Elements().Single(e => e.Name.LocalName == field.Key);
-
-                        var value = converter.ConvertFromInvariantString(rowValue.Value);
+                        var value = converter.ConvertFromInvariantString(rowValue.Value == "" ? null : rowValue.Value);
 
                         prop.SetValue(obj, value);
                     }
