@@ -7,7 +7,7 @@ using System.Xml.Linq;
 
 namespace TransactionServiceExtensions
 {
-
+    // Could deserialize into a dict first?
     public static class TransactionServiceQueryExtensions
     {
         private static Dictionary<string, PropertyInfo> propInfo = new Dictionary<string, PropertyInfo>();
@@ -16,19 +16,18 @@ namespace TransactionServiceExtensions
         {
             var result = service.GetArchetypeData(queryXml);
             var doc = XDocument.Parse(result);
+            // yield break;
             var rows = doc.Root.Elements();
 
-            foreach (var row in rows)
+            var fields = rows.First().Elements().ToDictionary(e => e.Name.LocalName, e => e.Value);
+
+            T obj;
+
+            var ctor = typeof(T).GetConstructors().FirstOrDefault();
+
+            if (ctor.GetParameters().Any())
             {
-                // Assumes same number of fields per row
-                // i.e. null values still have an element
-                var fields = row.Elements().ToDictionary(e => e.Name.LocalName, e => e.Value);
-
-                T obj;
-
-                var ctor = typeof(T).GetConstructors().FirstOrDefault();
-
-                if (ctor.GetParameters().Any())
+                foreach (var row in rows)
                 {
                     var ctorParams = ctor.GetParameters();
 
@@ -40,13 +39,17 @@ namespace TransactionServiceExtensions
 
                         var converter = TypeDescriptor.GetConverter(paramInfo.ParameterType);
                         var value = converter.ConvertFromInvariantString(f.Value);
-
+                        
                         return value;
                     });
 
                     obj = (T)ctor.Invoke(paramValues.ToArray());
+                    yield return obj;
                 }
-                else
+            }
+            else
+            {
+                foreach (var row in rows)
                 {
                     obj = Activator.CreateInstance<T>();
 
@@ -54,19 +57,21 @@ namespace TransactionServiceExtensions
                     {
                         propInfo.TryGetValue(field.Key, out var prop);
 
-                        prop = prop ?? typeof(T).GetProperty(field.Key);
+                        prop =  typeof(T).GetProperty(field.Key);
 
                         var propType = prop.PropertyType;
 
                         var converter = TypeDescriptor.GetConverter(propType);
 
-                        var value = converter.ConvertFromInvariantString(field.Value);
+                        var rowValue = row.Elements().Single(e => e.Name.LocalName == field.Key);
+
+                        var value = converter.ConvertFromInvariantString(rowValue.Value);
 
                         prop.SetValue(obj, value);
                     }
-                }
 
-                yield return obj; // Should call .ToList() so deserialization isn't repeated.
+                    yield return obj; // Should call .ToList() so deserialization isn't repeated.
+                }
             }
         }
     }
