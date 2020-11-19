@@ -23,7 +23,8 @@ namespace ConsoleApp1
 
             var propInfo = typeof(List<string>).GetProperty("Item");
 
-            var x = args.Select((a, i) => {
+            var x = args.Select((a, i) =>
+            {
                 var indexed = Expression.Property(paramListExp, propInfo, Expression.Constant(i));
                 var writeMethodCallExp = Expression.Call(consoleWriteMethod, new[] { indexed });
 
@@ -53,12 +54,12 @@ namespace ConsoleApp1
                 var itemPropExp = Expression.Property(paramListExp, propInfo, Expression.Constant(i));
 
                 var getConverterExp = Expression.Call(
-                    typeof(TypeDescriptor).GetMethod(nameof(TypeDescriptor.GetConverter), new[] { typeof(Type) }), 
+                    typeof(TypeDescriptor).GetMethod(nameof(TypeDescriptor.GetConverter), new[] { typeof(Type) }),
                     Expression.Constant(paramType));
 
                 var convertFromStringExp = Expression.Call(
-                    getConverterExp, 
-                    typeof(TypeConverter).GetMethod(nameof(TypeConverter.ConvertFromInvariantString), new[] { typeof(string) }), 
+                    getConverterExp,
+                    typeof(TypeConverter).GetMethod(nameof(TypeConverter.ConvertFromInvariantString), new[] { typeof(string) }),
                     new[] { itemPropExp });
 
                 var castExp = Expression.Convert(convertFromStringExp, paramType);
@@ -77,11 +78,72 @@ namespace ConsoleApp1
             return Expression.Lambda<Func<List<string>, T>>(newExp, paramListExp).Compile();
         }
 
+        static Func<T> GeneratePropMethod<T>()
+        {
+            // Assume list = ctor param order and types
+            // Assume T is an class with a specialized constructor
+
+            var type = typeof(T);
+
+            var initExpression = Expression.MemberInit(
+                Expression.New(type),
+                Expression.Bind(type.GetProperty("Name"), Expression.Constant("Bob")),
+                Expression.Bind(type.GetProperty("Age"), Expression.Constant(25)));
+
+            return Expression.Lambda<Func<T>>(initExpression).Compile();
+        }
+
+        static Func<List<string>, T> GeneratePropMethodDynamic<T>(List<string> fields)
+        {
+            // Assume field list will be same order as values list
+            // Assume T is an class with a default constructor
+
+            var type = typeof(T);
+
+            var paramListExp = Expression.Parameter(typeof(List<string>), "fieldValues");
+
+            var initializerExps = fields.Select((f, i) =>
+            {
+                var itemPropExp = Expression.Property(
+                    paramListExp, 
+                    typeof(List<string>).GetProperty("Item"), 
+                    Expression.Constant(i));
+
+                // Ignore casing for now
+                var propInfo = type.GetProperty(f);
+
+                var getConverterExp = Expression.Call(
+                    typeof(TypeDescriptor).GetMethod(nameof(TypeDescriptor.GetConverter), new[] { typeof(Type) }),
+                    Expression.Constant(propInfo.PropertyType));
+
+                var convertFromStringExp = Expression.Call(
+                    getConverterExp,
+                    typeof(TypeConverter).GetMethod(nameof(TypeConverter.ConvertFromInvariantString), new[] { typeof(string) }),
+                    new[] { itemPropExp });
+
+                var castExp = Expression.Convert(convertFromStringExp, propInfo.PropertyType);
+
+                return Expression.Bind(
+                    propInfo,
+                    castExp);
+            });
+
+            var initExpression = Expression.MemberInit(
+                Expression.New(type),
+                initializerExps);
+
+            return Expression.Lambda<Func<List<string>, T>>(initExpression, paramListExp).Compile();
+        }
+
         static void Main(string[] args)
         {
             //MethodCall();
 
             //IndexIntoArray();
+
+            var propMethod = GeneratePropMethodDynamic<TimekeeperSimpleProp>(new List<string> { "Name", "Age" });
+
+            var tProp = propMethod(new List<string> { "Bob", "25" });
 
             var fields = new List<string>
             {
@@ -95,7 +157,7 @@ namespace ConsoleApp1
 
 
             var l = PrintList(fields);
-            
+
             l(fields);
 
             var paramListExp = Expression.Parameter(typeof(List<string>), "array");
@@ -114,7 +176,7 @@ namespace ConsoleApp1
 
             var blockExp = Expression.Block(
                 new[] { varNameExp },
-                assignExp, 
+                assignExp,
                 writeMethodCallExp);
 
             var compiled = Expression.Lambda<Action<List<string>>>(blockExp, paramListExp).Compile();
