@@ -9,6 +9,7 @@ using Tests.TestData;
 using TransactionServiceExtensions;
 using Xunit;
 using FluentAssertions;
+using Data;
 
 namespace Tests
 {
@@ -66,6 +67,32 @@ namespace Tests
             actual.Should().BeEquivalentTo(data);
         }
 
+        [Fact]
+        public void Constructor2()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var expected = data.Select(d => new TimekeeperSimpleCtor(d.Name, d.Age));
+
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                Name = t.Name,
+                Age = t.Age,
+                //DateOfBirth = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? "",
+                //MatterNumber = t.MatterNumber?.ToString() ?? ""
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<TimekeeperSimpleCtor>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
 
         static List<TimekeeperProp> GenerateData(int size)
         {
@@ -90,9 +117,9 @@ namespace Tests
         {
             var ns = new XmlSerializerNamespaces();
             ns.Add("", "");
-            var serializer = new XmlSerializer(typeof(Data));
+            var serializer = new XmlSerializer(typeof(Tests.TestData.Data));
             using var textWriter = new StringWriter();
-            serializer.Serialize(textWriter, new Data { Timekeepers = data }, ns);
+            serializer.Serialize(textWriter, new Tests.TestData.Data { Timekeepers = data }, ns);
             return textWriter.ToString();
         }
     }
@@ -118,31 +145,6 @@ namespace Tests
         public DateTime? DateOfBirth { get; set; }
 
         public MatterNumber MatterNumber { get; set; }
-
-        public override string ToString() =>
-            $"Name; {Name}, " +
-            $"Age: {Age}, " +
-            $"Date of birth: {DateOfBirth}, " +
-            $"Matter number: {MatterNumber}";
-    }
-
-    public class TimekeeperCtor
-    {
-        public TimekeeperCtor(string name, int age, DateTime? dateOfBirth, MatterNumber matterNumber)
-        {
-            Name = name ?? throw new ArgumentNullException(nameof(name));
-            Age = age;
-            DateOfBirth = dateOfBirth;
-            MatterNumber = matterNumber;
-        }
-
-        public string Name { get; }
-
-        public int Age { get; }
-
-        public DateTime? DateOfBirth { get; }
-
-        public MatterNumber MatterNumber { get; }
 
         public override string ToString() =>
             $"Name; {Name}, " +
