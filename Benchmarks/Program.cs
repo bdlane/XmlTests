@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Xml;
 using System.Xml.Linq;
@@ -154,12 +155,48 @@ namespace Benchmarks
         //}
     }
 
+    [RankColumn(NumeralSystem.Arabic)]
+    public class CreateInstanceBenchmarks
+    {
+        private static ConstructorInfo ctor;
+
+        [Benchmark]
+        public Timekeeper NewImpl()
+        {
+            return new Timekeeper();
+        }
+
+        [Benchmark]
+        public Timekeeper ActivatorCreateInstance()
+        {
+            return Activator.CreateInstance<Timekeeper>();
+        }
+
+        [Benchmark]
+        public Timekeeper CtorInvoke()
+        {
+            return (Timekeeper)typeof(Timekeeper).GetConstructors().Single().Invoke(new object[] { });
+        }
+
+        [Benchmark]
+        public Timekeeper CtorInvokeCached()
+        {
+            if (ctor is null )
+            {
+                ctor = typeof(Timekeeper).GetConstructors().Single();
+            }
+
+            return (Timekeeper)ctor.Invoke(new object[] { });
+        }
+    }
+
     public class Program
     {
         public static void Main(string[] args)
         {
             //var result = new TransactionSerivceExtensionsBenchmarks().XmlReaderImpl();
-            var summary = BenchmarkRunner.Run<TransactionSerivceExtensionsBenchmarks>();
+            //var summary = BenchmarkRunner.Run<TransactionSerivceExtensionsBenchmarks>();
+            var summary = BenchmarkRunner.Run<CreateInstanceBenchmarks>();
         }
     }
 
