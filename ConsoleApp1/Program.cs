@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Data;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -88,7 +89,7 @@ namespace ConsoleApp1
                 "25"
             };
 
-            var e = GenerateConstructorMethod<Timekeeper>();
+            var e = GenerateConstructorMethod<TimekeeperSimpleCtor>();
 
             var t = e(fields);
 
@@ -100,7 +101,7 @@ namespace ConsoleApp1
             var paramListExp = Expression.Parameter(typeof(List<string>), "array");
             var varNameExp = Expression.Variable(typeof(string), "name");
 
-            var ctor = typeof(Timekeeper).GetConstructors().First();
+            var ctor = typeof(TimekeeperSimpleCtor).GetConstructors().First();
 
             var propInfo = typeof(List<string>).GetProperty("Item");
             //var property = Expression.Property(paramListExp, "Item",);
@@ -191,18 +192,6 @@ namespace ConsoleApp1
         {
             Console.WriteLine($"Hello {name}");
         }
-    }
-
-    class Timekeeper
-    {
-        public Timekeeper(string name, int age)
-        {
-            Name = name;
-            Age = age;
-        }
-
-        public string Name { get; }
-        public int Age { get; }
     }
 
     class MockService : ITransactionService
