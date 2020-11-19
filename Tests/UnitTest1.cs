@@ -93,6 +93,30 @@ namespace Tests
             actual.Should().BeEquivalentTo(expected);
         }
 
+        [Fact]
+        public void Properties2()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var expected = data.Select(d => new TimekeeperSimpleProp { Name = d.Name, Age = d.Age });
+
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                Name = t.Name,
+                Age = t.Age
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<TimekeeperSimpleProp>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
 
         static List<TimekeeperProp> GenerateData(int size)
         {

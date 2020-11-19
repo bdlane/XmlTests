@@ -19,11 +19,11 @@ namespace TransactionServiceExtensions
 
         private static Dictionary<Type, TypeConverter> typeConverters = new Dictionary<Type, TypeConverter>();
 
-        private static Func<List<string>, object> GetDeserializer(Type type)
+        private static Func<List<string>, object> GetDeserializer(Type type, List<string> fields)
         {
             if (!deserializers.TryGetValue(type, out var deserializer))
             {
-                deserializer = CreateDeserializerWithCachedTypeConverter(type);
+                deserializer = CreateDeserializerWithCachedTypeConverter(type, fields);
                 //deserializer = CreateDeserializer(type);
             }
 
@@ -85,7 +85,65 @@ namespace TransactionServiceExtensions
             return deserializer;
         }
 
-        private static Func<List<string>, object> CreateDeserializerWithCachedTypeConverter(Type type)
+        private static Func<List<string>, object> CreateDeserializerWithCachedTypeConverter(Type type, List<string> fields)
+        {
+            var ctor = type.GetConstructors().FirstOrDefault();
+
+            if (ctor.GetParameters().Any())
+            {
+                return CreateCtorDeserializer(type);
+            }
+            else
+            {
+                return CreatePropDeserializer(type, fields);
+            }
+        }
+
+        private static Func<List<string>, object> CreatePropDeserializer(Type type, List<string> fields)
+        {
+            // Assume correct param order?
+            var paramListExp = Expression.Parameter(typeof(List<string>), "fieldValues");
+
+            var initializerExps = fields.Select((f, i) =>
+            {
+                var itemPropExp = Expression.Property(
+                    paramListExp,
+                    typeof(List<string>).GetProperty("Item"),
+                    Expression.Constant(i));
+
+                // Ignore casing for now
+                var propInfo = type.GetProperty(f);
+
+                //var getConverterExp = Expression.Call(
+                //    typeof(TypeDescriptor).GetMethod(nameof(TypeDescriptor.GetConverter), new[] { typeof(Type) }),
+                //    Expression.Constant(propInfo.PropertyType));
+
+                var getConverterExp = Expression.Call(
+                    typeof(TransactionServiceQueryExtensions).GetMethod(
+                        nameof(TransactionServiceQueryExtensions.GetTypeConverter),
+                        BindingFlags.NonPublic | BindingFlags.Static),
+                    Expression.Constant(propInfo.PropertyType));
+
+                var convertFromStringExp = Expression.Call(
+                    getConverterExp,
+                    typeof(TypeConverter).GetMethod(nameof(TypeConverter.ConvertFromInvariantString), new[] { typeof(string) }),
+                    new[] { itemPropExp });
+
+                var castExp = Expression.Convert(convertFromStringExp, propInfo.PropertyType);
+
+                return Expression.Bind(
+                    propInfo,
+                    castExp);
+            });
+
+            var initExpression = Expression.MemberInit(
+                Expression.New(type),
+                initializerExps);
+
+            return Expression.Lambda<Func<List<string>, object>>(initExpression, paramListExp).Compile();
+        }
+
+        private static Func<List<string>, object> CreateCtorDeserializer(Type type)
         {
             var ctor = type.GetConstructors().Single();
 
@@ -100,7 +158,7 @@ namespace TransactionServiceExtensions
 
                 var getConverterExp = Expression.Call(
                     typeof(TransactionServiceQueryExtensions).GetMethod(
-                        nameof(TransactionServiceQueryExtensions.GetTypeConverter), 
+                        nameof(TransactionServiceQueryExtensions.GetTypeConverter),
                         BindingFlags.NonPublic | BindingFlags.Static),
                     Expression.Constant(paramType));
 
@@ -138,19 +196,16 @@ namespace TransactionServiceExtensions
             //return new List<T> { };
 
             var ctor = typeof(T).GetConstructors().FirstOrDefault();
+            var fields = rows.Take(1).Elements().Select(e => e.Name.LocalName).ToList();
 
-            if (ctor.GetParameters().Any())
+
+            var deserializer = GetDeserializer(typeof(T), fields);
+
+            foreach (var row in rows)
             {
-                //var ctorParams = ctor.GetParameters();
+                var values = row.Elements().Select(e => e.Value);
 
-                var deserializer = GetDeserializer(typeof(T));
-
-                foreach (var row in rows)
-                {
-                    var values = row.Elements().Select(e => e.Value);
-
-                    yield return (T)deserializer(values.ToList());
-                }
+                yield return (T)deserializer(values.ToList());
             }
         }
 

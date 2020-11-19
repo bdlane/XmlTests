@@ -24,7 +24,7 @@ namespace Benchmarks
     {
         private string xml;
 
-        [Params(1, 100, 1000, 10000)]
+        [Params(1000)]
         public int NumberOfRecords
         {
             set
@@ -62,15 +62,17 @@ namespace Benchmarks
         //    return (int)converter.ConvertFromInvariantString("123");
         //}
 
+        [Benchmark]
+        public List<TimekeeperProps> QueryTProps() => service.Query<TimekeeperProps>("").ToList();
+
+        [Benchmark]
+        public List<TimekeeperSimpleProp> QueryTProps2() => service.Query2<TimekeeperSimpleProp>("").ToList();
+
         //[Benchmark]
-        //public List<TimekeeperProps> QueryTProps() => service.Query<TimekeeperProps>("").ToList();
+        //public List<TimekeeperCtor> QueryTCtor() => service.Query2<TimekeeperCtor>("").ToList();
 
-
-        [Benchmark]
-        public List<TimekeeperCtor> QueryTCtor() => service.Query<TimekeeperCtor>("").ToList();
-
-        [Benchmark]
-        public List<TimekeeperSimpleCtor> QueryTCtor2() => service.Query2<TimekeeperSimpleCtor>("").ToList();
+        //[Benchmark]
+        //public List<TimekeeperSimpleCtor> QueryTCtor2() => service.Query2<TimekeeperSimpleCtor>("").ToList();
 
         [Benchmark(Baseline = true)]
         public List<Benchmarks.TestData.Deserialize.Timekeeper> XmlSerializerImpl()
@@ -194,9 +196,9 @@ namespace Benchmarks
     {
         public static void Main(string[] args)
         {
-            //var result = new TransactionSerivceExtensionsBenchmarks().XmlReaderImpl();
-            //var summary = BenchmarkRunner.Run<TransactionSerivceExtensionsBenchmarks>();
-            var summary = BenchmarkRunner.Run<CreateInstanceBenchmarks>();
+            //new TransactionSerivceExtensionsBenchmarks { NumberOfRecords = 1 }.QueryTProps2();
+            var summary = BenchmarkRunner.Run<TransactionSerivceExtensionsBenchmarks>();
+            //var summary = BenchmarkRunner.Run<CreateInstanceBenchmarks>();
         }
     }
 
@@ -209,9 +211,10 @@ namespace Benchmarks
             var serializable = data.Select(t => new TestData.Timekeeper
             {
                 Name = t.Name,
-                Age = t.Age,
-                DateOfBirth = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? "",
-                MatterNumber = t.MatterNumber?.ToString() ?? ""
+                Age = t.Age
+                //,
+                //DateOfBirth = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? "",
+                //MatterNumber = t.MatterNumber?.ToString() ?? ""
             }).ToList();
 
             return Serialize(serializable);
