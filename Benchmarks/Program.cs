@@ -24,7 +24,7 @@ namespace Benchmarks
     {
         private string xml;
 
-        [Params(1000)]
+        [Params(1, 100, 1000, 10000)]
         public int NumberOfRecords
         {
             set
@@ -69,10 +69,10 @@ namespace Benchmarks
         public List<TimekeeperSimpleProp> QueryTProps2() => service.Query2<TimekeeperSimpleProp>("").ToList();
 
         //[Benchmark]
-        //public List<TimekeeperCtor> QueryTCtor() => service.Query2<TimekeeperCtor>("").ToList();
+        public List<TimekeeperCtor> QueryTCtor() => service.Query<TimekeeperCtor>("").ToList();
 
         //[Benchmark]
-        //public List<TimekeeperSimpleCtor> QueryTCtor2() => service.Query2<TimekeeperSimpleCtor>("").ToList();
+        public List<TimekeeperSimpleCtor> QueryTCtor2() => service.Query2<TimekeeperSimpleCtor>("").ToList();
 
         [Benchmark(Baseline = true)]
         public List<Benchmarks.TestData.Deserialize.Timekeeper> XmlSerializerImpl()
@@ -162,25 +162,25 @@ namespace Benchmarks
     {
         private static ConstructorInfo ctor;
 
-        [Benchmark]
+        //[Benchmark]
         public Timekeeper NewImpl()
         {
             return new Timekeeper();
         }
 
-        [Benchmark]
+        //[Benchmark]
         public Timekeeper ActivatorCreateInstance()
         {
             return Activator.CreateInstance<Timekeeper>();
         }
 
-        [Benchmark]
+        //[Benchmark]
         public Timekeeper CtorInvoke()
         {
             return (Timekeeper)typeof(Timekeeper).GetConstructors().Single().Invoke(new object[] { });
         }
 
-        [Benchmark]
+        //[Benchmark]
         public Timekeeper CtorInvokeCached()
         {
             if (ctor is null )
@@ -190,13 +190,34 @@ namespace Benchmarks
 
             return (Timekeeper)ctor.Invoke(new object[] { });
         }
+
+        [Benchmark]
+        public TimekeeperSimpleProp ObjectInit()
+        {
+            return new TimekeeperSimpleProp
+            {
+                Name = "Bob",
+                Age = 25
+            };
+        }
+
+        [Benchmark]
+        public TimekeeperSimpleProp NewThenProp()
+        {
+            var t = new TimekeeperSimpleProp();
+
+            t.Name = "Bob";
+            t.Age = 25;
+
+            return t;
+        }
     }
 
     public class Program
     {
         public static void Main(string[] args)
         {
-            //new TransactionSerivceExtensionsBenchmarks { NumberOfRecords = 1 }.QueryTProps2();
+            //new TransactionSerivceExtensionsBenchmarks { NumberOfRecords = 1 }.QueryTCtor2();
             var summary = BenchmarkRunner.Run<TransactionSerivceExtensionsBenchmarks>();
             //var summary = BenchmarkRunner.Run<CreateInstanceBenchmarks>();
         }

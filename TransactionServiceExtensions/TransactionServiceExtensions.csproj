@@ -8,4 +8,7 @@
     <ProjectReference Include="..\Data\Data.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="AgileObjects.ReadableExpressions" Version="2.5.1" />
+  </ItemGroup>
 </Project>

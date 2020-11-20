@@ -6,6 +6,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Xml.Linq;
+using AgileObjects.ReadableExpressions;
 
 namespace TransactionServiceExtensions
 {
@@ -24,6 +25,7 @@ namespace TransactionServiceExtensions
             if (!deserializers.TryGetValue(type, out var deserializer))
             {
                 deserializer = CreateDeserializerWithCachedTypeConverter(type, fields);
+                deserializers.Add(type, deserializer);
                 //deserializer = CreateDeserializer(type);
             }
 
@@ -103,12 +105,17 @@ namespace TransactionServiceExtensions
         {
             // Assume correct param order?
             var paramListExp = Expression.Parameter(typeof(List<string>), "fieldValues");
+            var itemPropInfo = typeof(List<string>).GetProperty("Item");
+            var getTypeConverterMethod = typeof(TransactionServiceQueryExtensions).GetMethod(
+                        nameof(TransactionServiceQueryExtensions.GetTypeConverter),
+                        BindingFlags.NonPublic | BindingFlags.Static);
+            var convertMethod = typeof(TypeConverter).GetMethod(nameof(TypeConverter.ConvertFromInvariantString), new[] { typeof(string) });
 
             var initializerExps = fields.Select((f, i) =>
             {
                 var itemPropExp = Expression.Property(
                     paramListExp,
-                    typeof(List<string>).GetProperty("Item"),
+                    itemPropInfo,
                     Expression.Constant(i));
 
                 // Ignore casing for now
@@ -119,14 +126,12 @@ namespace TransactionServiceExtensions
                 //    Expression.Constant(propInfo.PropertyType));
 
                 var getConverterExp = Expression.Call(
-                    typeof(TransactionServiceQueryExtensions).GetMethod(
-                        nameof(TransactionServiceQueryExtensions.GetTypeConverter),
-                        BindingFlags.NonPublic | BindingFlags.Static),
+                    getTypeConverterMethod,
                     Expression.Constant(propInfo.PropertyType));
 
                 var convertFromStringExp = Expression.Call(
                     getConverterExp,
-                    typeof(TypeConverter).GetMethod(nameof(TypeConverter.ConvertFromInvariantString), new[] { typeof(string) }),
+                    convertMethod,
                     new[] { itemPropExp });
 
                 var castExp = Expression.Convert(convertFromStringExp, propInfo.PropertyType);
@@ -139,6 +144,8 @@ namespace TransactionServiceExtensions
             var initExpression = Expression.MemberInit(
                 Expression.New(type),
                 initializerExps);
+
+            var s = initExpression.ToReadableString();
 
             return Expression.Lambda<Func<List<string>, object>>(initExpression, paramListExp).Compile();
         }
@@ -193,19 +200,15 @@ namespace TransactionServiceExtensions
             var doc = XDocument.Parse(result);
             var rows = doc.Root.Elements();
 
-            //return new List<T> { };
-
             var ctor = typeof(T).GetConstructors().FirstOrDefault();
             var fields = rows.Take(1).Elements().Select(e => e.Name.LocalName).ToList();
-
-
             var deserializer = GetDeserializer(typeof(T), fields);
 
             foreach (var row in rows)
             {
-                var values = row.Elements().Select(e => e.Value);
+                var values = row.Elements().Select(e => e.Value).ToList();
 
-                yield return (T)deserializer(values.ToList());
+                yield return (T)deserializer(values);
             }
         }
 
