@@ -44,10 +44,17 @@ namespace TransactionServiceExtensions
 
         private static Func<List<string>, object> CreateDeserializer(Type type, List<string> fields)
         {
-            if (type == typeof(string) || type.IsPrimitive ||
-                Nullable.GetUnderlyingType(type) != null)
+            // if is object/dynamic
+
+            if (type == typeof(string) || type.IsValueType //type.IsPrimitive ||
+                || Nullable.GetUnderlyingType(type) != null)
             {
                 return CreatePrimitiveDeserializer(type);
+            }
+
+            if (type.IsEnum)
+            {
+                return CreateEnumDeserializer(type);
             }
 
             var ctor = type.GetConstructors().FirstOrDefault();
@@ -60,6 +67,11 @@ namespace TransactionServiceExtensions
             {
                 return CreatePropDeserializer(type, fields);
             }
+        }
+
+        private static Func<List<string>, object> CreateEnumDeserializer(Type type)
+        {
+            throw new NotImplementedException();
         }
 
         private static Func<List<string>, object> CreatePrimitiveDeserializer(Type type)

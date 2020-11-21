@@ -10,6 +10,7 @@ using TransactionServiceExtensions;
 using Xunit;
 using FluentAssertions;
 using Data;
+using AutoFixture.Xunit2;
 
 namespace Tests
 {
@@ -258,6 +259,28 @@ namespace Tests
             actual.Should().BeEquivalentTo(expected);
         }
 
+        [Theory, AutoData]
+        public void QueryEnum(IEnumerable<Size> sizes)
+        {
+            // Arrange
+            var expected = sizes;
+
+            var serializable = sizes.Select(v => new TestData.SingleValueRow
+            {
+                Value = ((int)v).ToString()
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<Size>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
         // Nullable int
         // DateTime
         // Nullable DateTime
@@ -366,6 +389,13 @@ namespace Tests
         {
             return value is string s ? new MatterNumber(s) : null;
         }
+    }
+
+    public enum Size
+    {
+        Small = 0,
+        Medium,
+        Large
     }
 }
 

@@ -147,6 +147,13 @@ namespace ConsoleApp1
             return Expression.Lambda<Func<string, int?>>(ifExp, paramExp).Compile();
         }
 
+        public enum Size
+        {
+            Small = 0,
+            Medium,
+            Large
+        }
+
         static void Main(string[] args)
         {
             //MethodCall();
@@ -155,15 +162,13 @@ namespace ConsoleApp1
             var s = "";
             //int foo = (s == string.Empty ? (int?)null : int.Parse(s));
 
-            Console.WriteLine(IsNullable(typeof(int)));
-            Console.WriteLine(IsNullable(typeof(int?)));
-            Console.WriteLine(IsNullable(typeof(Program)));
+            var enumConv = TypeDescriptor.GetConverter(typeof(Size));
 
-            bool IsNullable(Type type) => Nullable.GetUnderlyingType(type) != null;
+            var converted = enumConv.ConvertFromInvariantString("Large");
+            var converted2 = enumConv.ConvertFromInvariantString("1");
 
-            var td1 = TypeDescriptor.GetConverter(typeof(DateTime));
-            var td2 = TypeDescriptor.GetConverter(typeof(DateTime));
-            var tdn = TypeDescriptor.GetConverter(typeof(DateTime?));
+            var converted4 = enumConv.ConvertFromInvariantString("7");
+            var converted3 = enumConv.ConvertFromInvariantString("blah");
 
             var ifelse = ConditionTest();
 
