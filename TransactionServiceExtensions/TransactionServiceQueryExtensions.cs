@@ -44,7 +44,8 @@ namespace TransactionServiceExtensions
 
         private static Func<List<string>, object> CreateDeserializer(Type type, List<string> fields)
         {
-            if (type == typeof(string) || type.IsPrimitive)
+            if (type == typeof(string) || type.IsPrimitive ||
+                Nullable.GetUnderlyingType(type) != null)
             {
                 return CreatePrimitiveDeserializer(type);
             }

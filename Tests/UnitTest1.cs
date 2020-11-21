@@ -242,9 +242,9 @@ namespace Tests
             var data = GenerateData(3);
             var expected = data.Select(d => d.DateOfBirth);
 
-            var serializable = data.Select(t => new TestData.Timekeeper
+            var serializable = data.Select(t => new TestData.SingleValueRow
             {
-                DateOfBirth = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? ""
+                Value = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? ""
             }).ToList();
 
             var xml = Serialize(serializable);
@@ -288,6 +288,17 @@ namespace Tests
             var serializer = new XmlSerializer(typeof(Tests.TestData.Data));
             using var textWriter = new StringWriter();
             serializer.Serialize(textWriter, new Tests.TestData.Data { Timekeepers = data }, ns);
+            return textWriter.ToString();
+        }
+
+
+        static string Serialize(List<Tests.TestData.SingleValueRow> data)
+        {
+            var ns = new XmlSerializerNamespaces();
+            ns.Add("", "");
+            var serializer = new XmlSerializer(typeof(Tests.TestData.SingleValueData));
+            using var textWriter = new StringWriter();
+            serializer.Serialize(textWriter, new Tests.TestData.SingleValueData { Rows = data }, ns);
             return textWriter.ToString();
         }
     }
@@ -382,5 +393,18 @@ namespace Tests.TestData
             $"Age: {Age}, " +
             $"Date of birth: {DateOfBirth}, " +
             $"Matter number: {MatterNumber}";
+    }
+
+    [XmlRoot(ElementName = "Data")]
+    public class SingleValueData
+    {
+        [XmlElement(ElementName = "Timekeeper")]
+        public List<SingleValueRow> Rows { get; set; }
+    }
+
+    [XmlType(TypeName = "Row")]
+    public class SingleValueRow
+    {
+        public string Value { get; set; }
     }
 }

@@ -161,10 +161,9 @@ namespace ConsoleApp1
 
             bool IsNullable(Type type) => Nullable.GetUnderlyingType(type) != null;
 
-            object Method()
-            {
-                return new Nullable<int>();
-            }
+            var td1 = TypeDescriptor.GetConverter(typeof(DateTime));
+            var td2 = TypeDescriptor.GetConverter(typeof(DateTime));
+            var tdn = TypeDescriptor.GetConverter(typeof(DateTime?));
 
             var ifelse = ConditionTest();
 
