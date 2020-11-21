@@ -199,7 +199,9 @@ namespace TransactionServiceExtensions
 
             foreach (var row in rows)
             {
-                var values = row.Elements().Select(e => e.Value).ToList();
+                var values = row.Elements()
+                    .Select(e => e.Value == string.Empty ? null : e.Value)
+                    .ToList();
 
                 yield return (T)deserializer(values);
             }

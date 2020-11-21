@@ -94,6 +94,30 @@ namespace Tests
         }
 
         [Fact]
+        public void Constructor3()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                Name = t.Name,
+                Age = t.Age,
+                DateOfBirth = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? "",
+                MatterNumber = t.MatterNumber?.ToString() ?? ""
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<TimekeeperCtor>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(data);
+        }
+
+        [Fact]
         public void Properties2()
         {
             // Arrange
@@ -115,6 +139,31 @@ namespace Tests
 
             // Assert
             actual.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public void Properties3()
+        {
+            // Arrange
+            var data = GenerateData(3);
+
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                Name = t.Name,
+                Age = t.Age,
+                DateOfBirth = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? "",
+                MatterNumber = t.MatterNumber?.ToString() ?? ""
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<TimekeeperProp>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(data);
         }
 
 

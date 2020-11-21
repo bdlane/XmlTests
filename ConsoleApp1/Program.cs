@@ -135,11 +135,36 @@ namespace ConsoleApp1
             return Expression.Lambda<Func<List<string>, T>>(initExpression, paramListExp).Compile();
         }
 
+        static Func<string, int?> ConditionTest()
+        {
+            var paramExp = Expression.Parameter(typeof(string), "arg");
+
+            var ifExp = Expression.Condition(
+                Expression.Equal(paramExp, Expression.Constant(string.Empty)),
+                Expression.Constant(null, typeof(int?)),
+                Expression.Constant(1, typeof(int?)));
+
+            return Expression.Lambda<Func<string, int?>>(ifExp, paramExp).Compile();
+        }
+
         static void Main(string[] args)
         {
             //MethodCall();
 
             //IndexIntoArray();
+            var s = "";
+            //int foo = (s == string.Empty ? (int?)null : int.Parse(s));
+
+            Console.WriteLine(IsNullable(typeof(int)));
+            Console.WriteLine(IsNullable(typeof(int?)));
+            Console.WriteLine(IsNullable(typeof(Program)));
+
+            bool IsNullable(Type type) => Nullable.GetUnderlyingType(type) != null;
+
+            var ifelse = ConditionTest();
+
+            var hello = ifelse("hello");
+            var nope = ifelse("");
 
             var propMethod = GeneratePropMethodDynamic<TimekeeperSimpleProp>(new List<string> { "Name", "Age" });
 

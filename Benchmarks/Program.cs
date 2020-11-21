@@ -24,7 +24,9 @@ namespace Benchmarks
     {
         private string xml;
 
-        [Params(1, 100, 1000, 10000)]
+        //[Params(1)]
+        [Params(100)]
+        //[Params(1, 100, 1000, 10000)]
         public int NumberOfRecords
         {
             set
@@ -66,13 +68,13 @@ namespace Benchmarks
         public List<TimekeeperProps> QueryTProps() => service.Query<TimekeeperProps>("").ToList();
 
         [Benchmark]
-        public List<TimekeeperSimpleProp> QueryTProps2() => service.Query2<TimekeeperSimpleProp>("").ToList();
+        public List<TimekeeperProps> QueryTProps2() => service.Query2<TimekeeperProps>("").ToList();
 
-        //[Benchmark]
+        [Benchmark]
         public List<TimekeeperCtor> QueryTCtor() => service.Query<TimekeeperCtor>("").ToList();
 
-        //[Benchmark]
-        public List<TimekeeperSimpleCtor> QueryTCtor2() => service.Query2<TimekeeperSimpleCtor>("").ToList();
+        [Benchmark]
+        public List<TimekeeperCtor> QueryTCtor2() => service.Query2<TimekeeperCtor>("").ToList();
 
         [Benchmark(Baseline = true)]
         public List<Benchmarks.TestData.Deserialize.Timekeeper> XmlSerializerImpl()
@@ -232,15 +234,13 @@ namespace Benchmarks
             var serializable = data.Select(t => new TestData.Timekeeper
             {
                 Name = t.Name,
-                Age = t.Age
-                //,
-                //DateOfBirth = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? "",
-                //MatterNumber = t.MatterNumber?.ToString() ?? ""
+                Age = t.Age,
+                DateOfBirth = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? "",
+                MatterNumber = t.MatterNumber?.ToString() ?? ""
             }).ToList();
 
             return Serialize(serializable);
         }
-
 
         static List<TimekeeperProps> GenerateData(int size)
         {
