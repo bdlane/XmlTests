@@ -166,6 +166,55 @@ namespace Tests
             actual.Should().BeEquivalentTo(data);
         }
 
+        [Fact]
+        public void QueryString()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var expected = data.Select(d => d.Name);
+
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                Name = t.Name
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<string>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public void QueryInt()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var expected = data.Select(d => d.Age);
+
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                Age = t.Age
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<int>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
+        // Nullable int
+        // DateTime
+        // Nullable DateTime
 
         static List<TimekeeperProp> GenerateData(int size)
         {
