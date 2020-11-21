@@ -171,10 +171,13 @@ namespace TransactionServiceExtensions
 
             var newExp = Expression.New(ctor, argExps);
 
+            // Handles Nullable<> types. Can't be used as return type for 'object'
+            var convertExp = Expression.Convert(newExp, typeof(object));
+
             // Construct
             // Return
 
-            var deserializer = Expression.Lambda<Func<List<string>, object>>(newExp, paramListExp).Compile();
+            var deserializer = Expression.Lambda<Func<List<string>, object>>(convertExp, paramListExp).Compile();
 
             return deserializer;
         }

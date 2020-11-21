@@ -212,6 +212,52 @@ namespace Tests
             actual.Should().BeEquivalentTo(expected);
         }
 
+        [Fact]
+        public void QueryNullableInt()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var expected = data.Select(d => (int?)d.Age);
+
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                Age = t.Age
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<int?>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public void QueryNullableDateTime()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var expected = data.Select(d => d.DateOfBirth);
+
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                DateOfBirth = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? ""
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<DateTime?>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
         // Nullable int
         // DateTime
         // Nullable DateTime

@@ -161,6 +161,11 @@ namespace ConsoleApp1
 
             bool IsNullable(Type type) => Nullable.GetUnderlyingType(type) != null;
 
+            object Method()
+            {
+                return new Nullable<int>();
+            }
+
             var ifelse = ConditionTest();
 
             var hello = ifelse("hello");
