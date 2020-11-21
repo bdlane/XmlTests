@@ -26,10 +26,7 @@ namespace TransactionServiceExtensions
             {
                 deserializer = CreateDeserializerWithCachedTypeConverter(type, fields);
                 deserializers.Add(type, deserializer);
-                //deserializer = CreateDeserializer(type);
             }
-
-            //return new Func<List<string>, object>(l => new TimekeeperSimpleCtor("", 1));
 
             return deserializer;
         }
@@ -81,8 +78,6 @@ namespace TransactionServiceExtensions
             // Return
 
             var deserializer = Expression.Lambda<Func<List<string>, object>>(newExp, paramListExp).Compile();
-
-            deserializers.Add(type, deserializer);
 
             return deserializer;
         }
@@ -188,8 +183,6 @@ namespace TransactionServiceExtensions
             // Return
 
             var deserializer = Expression.Lambda<Func<List<string>, object>>(newExp, paramListExp).Compile();
-
-            deserializers.Add(type, deserializer);
 
             return deserializer;
         }
