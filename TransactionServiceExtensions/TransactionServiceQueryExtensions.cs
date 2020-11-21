@@ -44,17 +44,14 @@ namespace TransactionServiceExtensions
 
         private static Func<List<string>, object> CreateDeserializer(Type type, List<string> fields)
         {
-            // if is object/dynamic
+            // TODO: object/dynamic
+            // TODO: tuple
+            // TODO: dictionary
 
             if (type == typeof(string) || type.IsValueType //type.IsPrimitive ||
                 || Nullable.GetUnderlyingType(type) != null)
             {
                 return CreatePrimitiveDeserializer(type);
-            }
-
-            if (type.IsEnum)
-            {
-                return CreateEnumDeserializer(type);
             }
 
             var ctor = type.GetConstructors().FirstOrDefault();
@@ -69,36 +66,20 @@ namespace TransactionServiceExtensions
             }
         }
 
-        private static Func<List<string>, object> CreateEnumDeserializer(Type type)
-        {
-            throw new NotImplementedException();
-        }
-
         private static Func<List<string>, object> CreatePrimitiveDeserializer(Type type)
         {
             var propInfo = typeof(List<string>).GetProperty("Item");
             var paramListExp = Expression.Parameter(typeof(List<string>), "args");
 
-            var paramType = type;
-            // Get converter from cache
-            var itemPropExp = Expression.Property(paramListExp, propInfo, Expression.Constant(0));
+            var itemPropExp = Expression.Property(
+                paramListExp, propInfo, Expression.Constant(0));
 
-            var getConverterExp = Expression.Call(
-                typeof(TransactionServiceQueryExtensions).GetMethod(
-                    nameof(TransactionServiceQueryExtensions.GetTypeConverter),
-                    BindingFlags.NonPublic | BindingFlags.Static),
-                Expression.Constant(paramType));
+            // TODO: Avoid double cast expression
+            var castExp = Expression.Convert(
+                GetTypeConverterExpression(type, itemPropExp),
+                typeof(object));
 
-            var convertFromStringExp = Expression.Call(
-                getConverterExp,
-                typeof(TypeConverter).GetMethod(nameof(TypeConverter.ConvertFromInvariantString), new[] { typeof(string) }),
-                new[] { itemPropExp });
-
-            var castExp = Expression.Convert(convertFromStringExp, paramType);
-
-            var deserializer = Expression.Lambda<Func<List<string>, object>>(convertFromStringExp, paramListExp).Compile();
-
-            return deserializer;
+            return Expression.Lambda<Func<List<string>, object>>(castExp, paramListExp).Compile();
         }
 
         private static Func<List<string>, object> CreatePropDeserializer(Type type, List<string> fields)
@@ -106,10 +87,6 @@ namespace TransactionServiceExtensions
             // Assume correct param order?
             var paramListExp = Expression.Parameter(typeof(List<string>), "fieldValues");
             var itemPropInfo = typeof(List<string>).GetProperty("Item");
-            var getTypeConverterMethod = typeof(TransactionServiceQueryExtensions).GetMethod(
-                        nameof(TransactionServiceQueryExtensions.GetTypeConverter),
-                        BindingFlags.NonPublic | BindingFlags.Static);
-            var convertMethod = typeof(TypeConverter).GetMethod(nameof(TypeConverter.ConvertFromInvariantString), new[] { typeof(string) });
 
             var initializerExps = fields.Select((f, i) =>
             {
@@ -121,20 +98,8 @@ namespace TransactionServiceExtensions
                 // Ignore casing for now
                 var propInfo = type.GetProperty(f);
 
-                //var getConverterExp = Expression.Call(
-                //    typeof(TypeDescriptor).GetMethod(nameof(TypeDescriptor.GetConverter), new[] { typeof(Type) }),
-                //    Expression.Constant(propInfo.PropertyType));
-
-                var getConverterExp = Expression.Call(
-                    getTypeConverterMethod,
-                    Expression.Constant(propInfo.PropertyType));
-
-                var convertFromStringExp = Expression.Call(
-                    getConverterExp,
-                    convertMethod,
-                    new[] { itemPropExp });
-
-                var castExp = Expression.Convert(convertFromStringExp, propInfo.PropertyType);
+                var castExp = GetTypeConverterExpression(
+                    propInfo.PropertyType, itemPropExp);
 
                 return Expression.Bind(
                     propInfo,
@@ -145,9 +110,34 @@ namespace TransactionServiceExtensions
                 Expression.New(type),
                 initializerExps);
 
-            var s = initExpression.ToReadableString();
-
             return Expression.Lambda<Func<List<string>, object>>(initExpression, paramListExp).Compile();
+        }
+
+        private static MethodInfo getTypeConverterMethod =
+                typeof(TransactionServiceQueryExtensions).GetMethod(
+                    nameof(TransactionServiceQueryExtensions.GetTypeConverter),
+                    BindingFlags.NonPublic | BindingFlags.Static);
+
+        private static MethodInfo ConvertFromInvariantStringMEthod =
+                typeof(TypeConverter).GetMethod(
+                    nameof(TypeConverter.ConvertFromInvariantString),
+                    new[] { typeof(string) });
+
+
+        private static Expression GetTypeConverterExpression(
+            Type type, Expression accessorExp)
+        {
+            var getConverterExp = Expression.Call(
+                    getTypeConverterMethod,
+                    Expression.Constant(type));
+
+            var convertFromStringExp = Expression.Call(
+                getConverterExp,
+                ConvertFromInvariantStringMEthod,
+                new[] { accessorExp });
+
+            return Expression.Convert(
+                convertFromStringExp, type);
         }
 
         private static Func<List<string>, object> CreateCtorDeserializer(Type type)
@@ -159,40 +149,15 @@ namespace TransactionServiceExtensions
 
             var argExps = ctor.GetParameters().Select((p, i) =>
             {
-                var paramType = p.ParameterType;
-                // Get converter from cache
-                var itemPropExp = Expression.Property(paramListExp, propInfo, Expression.Constant(i));
+                var itemPropExp = Expression.Property(
+                    paramListExp, propInfo, Expression.Constant(i));
 
-                var getConverterExp = Expression.Call(
-                    typeof(TransactionServiceQueryExtensions).GetMethod(
-                        nameof(TransactionServiceQueryExtensions.GetTypeConverter),
-                        BindingFlags.NonPublic | BindingFlags.Static),
-                    Expression.Constant(paramType));
-
-                var convertFromStringExp = Expression.Call(
-                    getConverterExp,
-                    typeof(TypeConverter).GetMethod(nameof(TypeConverter.ConvertFromInvariantString), new[] { typeof(string) }),
-                    new[] { itemPropExp });
-
-                var castExp = Expression.Convert(convertFromStringExp, paramType);
-
-                return castExp;
-
-                // Convert
-                // Cast
+                return GetTypeConverterExpression(p.ParameterType, itemPropExp);
             });
 
             var newExp = Expression.New(ctor, argExps);
 
-            // Handles Nullable<> types. Can't be used as return type for 'object'
-            var convertExp = Expression.Convert(newExp, typeof(object));
-
-            // Construct
-            // Return
-
-            var deserializer = Expression.Lambda<Func<List<string>, object>>(convertExp, paramListExp).Compile();
-
-            return deserializer;
+            return Expression.Lambda<Func<List<string>, object>>(newExp, paramListExp).Compile();
         }
 
         public static IEnumerable<T> Query2<T>(this ITransactionService service, string queryXml)

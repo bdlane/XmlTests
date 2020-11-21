@@ -5,12 +5,11 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Xml.Serialization;
-using Tests.TestData;
+using AutoFixture.Xunit2;
+using Data;
+using FluentAssertions;
 using TransactionServiceExtensions;
 using Xunit;
-using FluentAssertions;
-using Data;
-using AutoFixture.Xunit2;
 
 namespace Tests
 {
