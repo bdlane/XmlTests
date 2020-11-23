@@ -97,67 +97,67 @@ namespace Benchmarks
         //    //    }
         //    //}
 
-        //    //[Benchmark]
-        //    //public List<TimekeeperProps> XDocumentImpl()
-        //    //{
-        //    //    var doc = XDocument.Parse(xml);
-        //    //    var rows = doc.Root.Elements();
+        [Benchmark]
+        public List<TimekeeperProps> XDocumentImpl()
+        {
+            var doc = XDocument.Parse(xml);
+            var rows = doc.Root.Elements();
 
-        //    //    var tks = rows.Select(r => new TimekeeperProps
-        //    //    {
-        //    //        Name = r.Element("Name").Value,
-        //    //        Age = int.Parse(r.Element("Age").Value),
-        //    //        DateOfBirth = ParseDateOfBirth(r.Element("DateOfBirth").Value),
-        //    //        MatterNumber = ParseMatterNumber(r.Element("MatterNumber").Value)
-        //    //    });
+            var tks = rows.Select(r => new TimekeeperProps
+            {
+                Name = r.Element("Name").Value,
+                Age = int.Parse(r.Element("Age").Value),
+                DateOfBirth = ParseDateOfBirth(r.Element("DateOfBirth").Value),
+                MatterNumber = ParseMatterNumber(r.Element("MatterNumber").Value)
+            });
 
-        //    //    return tks.ToList();
-        //    //}
+            return tks.ToList();
+        }
 
-        //    //DateTime? ParseDateOfBirth(string value)
-        //    //{
-        //    //    if (DateTime.TryParse(value, out var result))
-        //    //    {
-        //    //        return result;
-        //    //    }
-        //    //    return null;
-        //    //}
+        DateTime? ParseDateOfBirth(string value)
+        {
+            if (DateTime.TryParse(value, out var result))
+            {
+                return result;
+            }
+            return null;
+        }
 
-        //    //MatterNumber ParseMatterNumber(string value)
-        //    //{
-        //    //    if (!string.IsNullOrEmpty(value))
-        //    //    {
-        //    //        return new MatterNumber(value);
-        //    //    }
-        //    //    return null;
-        //    //}
+        MatterNumber ParseMatterNumber(string value)
+        {
+            if (!string.IsNullOrEmpty(value))
+            {
+                return new MatterNumber(value);
+            }
+            return null;
+        }
 
-        //    //[Benchmark]
-        //    //public List<TimekeeperProps> XmlReaderImpl()
-        //    //{
-        //    //    return Parse().ToList();
+        [Benchmark]
+        public List<TimekeeperProps> XmlReaderImpl()
+        {
+            return Parse().ToList();
 
-        //    //    IEnumerable<TimekeeperProps> Parse()
-        //    //    {
-        //    //        using var reader = XmlReader.Create(new StringReader(xml), new XmlReaderSettings { IgnoreWhitespace = true });
+            IEnumerable<TimekeeperProps> Parse()
+            {
+                using var reader = XmlReader.Create(new StringReader(xml), new XmlReaderSettings { IgnoreWhitespace = true });
 
-        //    //        reader.ReadToFollowing("Data");
+                reader.ReadToFollowing("Data");
 
-        //    //        while (reader.ReadToFollowing("Timekeeper"))
-        //    //        {
-        //    //            var timekeeper = new TimekeeperProps();
+                while (reader.ReadToFollowing("Timekeeper"))
+                {
+                    var timekeeper = new TimekeeperProps();
 
-        //    //            reader.Read();
-        //    //            timekeeper.Name = reader.ReadInnerXml();
-        //    //            timekeeper.Age = int.Parse(reader.ReadInnerXml());
-        //    //            timekeeper.DateOfBirth = ParseDateOfBirth(reader.ReadInnerXml());
-        //    //            timekeeper.MatterNumber = ParseMatterNumber(reader.ReadInnerXml());
+                    reader.Read(); 
+                    timekeeper.Name = reader.ReadInnerXml();
+                    timekeeper.Age = int.Parse(reader.ReadInnerXml());
+                    timekeeper.DateOfBirth = ParseDateOfBirth(reader.ReadInnerXml());
+                    timekeeper.MatterNumber = ParseMatterNumber(reader.ReadInnerXml());
 
-        //    //            yield return timekeeper;
-        //    //        }
-        //    //    }
-        //}
-    }
+                    yield return timekeeper;
+                }
+            }
+        }
+}
 
     [RankColumn(NumeralSystem.Arabic)]
     public class CreateInstanceBenchmarks
@@ -219,8 +219,8 @@ namespace Benchmarks
     {
         public static void Main(string[] args)
         {
-            //new TransactionSerivceExtensionsBenchmarks { NumberOfRecords = 1 }.QueryTCtor2();
-            var summary = BenchmarkRunner.Run<TransactionSerivceExtensionsBenchmarks>();
+            new TransactionSerivceExtensionsBenchmarks { NumberOfRecords = 1 }.XmlReaderImpl();
+            //var summary = BenchmarkRunner.Run<TransactionSerivceExtensionsBenchmarks>();
             //var summary = BenchmarkRunner.Run<CreateInstanceBenchmarks>();
         }
     }

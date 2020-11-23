@@ -280,6 +280,39 @@ namespace Tests
             actual.Should().BeEquivalentTo(expected);
         }
 
+        [Fact]
+        public void QueryDict()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var expected = data.Select(d =>
+            {
+                return new Dictionary<string, string>
+                {
+                    { nameof(d.Name), d.Name },
+                    { nameof(d.Age), d.Age.ToString() },
+                    { nameof(d.DateOfBirth), d.DateOfBirth?.ToString("yyyy-MM-dd") }
+                };
+            });
+
+            var serializable = data.Select(v => new TestData.Timekeeper
+            {
+                Name = v.Name,
+                Age = v.Age,
+                DateOfBirth = v.DateOfBirth?.ToString("yyyy-MM-dd") ?? ""
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.QueryT("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
         // Nullable int
         // DateTime
         // Nullable DateTime

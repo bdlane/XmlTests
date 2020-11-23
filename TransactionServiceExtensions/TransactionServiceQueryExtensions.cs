@@ -180,6 +180,18 @@ namespace TransactionServiceExtensions
             }
         }
 
+        // Can only have one! Dict? Dynamic? Cast?
+        public static IEnumerable<IDictionary<string, string> >QueryT(this ITransactionService service, string queryXml)
+        {
+            var result = service.GetArchetypeData(queryXml);
+            var doc = XDocument.Parse(result);
+            var rows = doc.Root.Elements();
+
+            return rows.Select(r => r.Elements()
+                .ToDictionary(
+                e => e.Name.LocalName, e => (e.Value == string.Empty ? null : e.Value)));
+        }
+
         public static IEnumerable<T> Query<T>(this ITransactionService service, string queryXml)
         {
             var result = service.GetArchetypeData(queryXml);
