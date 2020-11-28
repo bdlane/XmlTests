@@ -135,11 +135,45 @@ namespace ConsoleApp1
             return Expression.Lambda<Func<List<string>, T>>(initExpression, paramListExp).Compile();
         }
 
+        static Func<string, int?> ConditionTest()
+        {
+            var paramExp = Expression.Parameter(typeof(string), "arg");
+
+            var ifExp = Expression.Condition(
+                Expression.Equal(paramExp, Expression.Constant(string.Empty)),
+                Expression.Constant(null, typeof(int?)),
+                Expression.Constant(1, typeof(int?)));
+
+            return Expression.Lambda<Func<string, int?>>(ifExp, paramExp).Compile();
+        }
+
+        public enum Size
+        {
+            Small = 0,
+            Medium,
+            Large
+        }
+
         static void Main(string[] args)
         {
             //MethodCall();
 
             //IndexIntoArray();
+            var s = "";
+            //int foo = (s == string.Empty ? (int?)null : int.Parse(s));
+
+            var enumConv = TypeDescriptor.GetConverter(typeof(Size));
+
+            var converted = enumConv.ConvertFromInvariantString("Large");
+            var converted2 = enumConv.ConvertFromInvariantString("1");
+
+            var converted4 = enumConv.ConvertFromInvariantString("7");
+            var converted3 = enumConv.ConvertFromInvariantString("blah");
+
+            var ifelse = ConditionTest();
+
+            var hello = ifelse("hello");
+            var nope = ifelse("");
 
             var propMethod = GeneratePropMethodDynamic<TimekeeperSimpleProp>(new List<string> { "Name", "Age" });
 

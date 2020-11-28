@@ -5,11 +5,11 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Xml.Serialization;
-using Tests.TestData;
+using AutoFixture.Xunit2;
+using Data;
+using FluentAssertions;
 using TransactionServiceExtensions;
 using Xunit;
-using FluentAssertions;
-using Data;
 
 namespace Tests
 {
@@ -94,6 +94,30 @@ namespace Tests
         }
 
         [Fact]
+        public void Constructor3()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                Name = t.Name,
+                Age = t.Age,
+                DateOfBirth = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? "",
+                MatterNumber = t.MatterNumber?.ToString() ?? ""
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<TimekeeperCtor>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(data);
+        }
+
+        [Fact]
         public void Properties2()
         {
             // Arrange
@@ -117,6 +141,181 @@ namespace Tests
             actual.Should().BeEquivalentTo(expected);
         }
 
+        [Fact]
+        public void Properties3()
+        {
+            // Arrange
+            var data = GenerateData(3);
+
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                Name = t.Name,
+                Age = t.Age,
+                DateOfBirth = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? "",
+                MatterNumber = t.MatterNumber?.ToString() ?? ""
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<TimekeeperProp>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(data);
+        }
+
+        [Fact]
+        public void QueryString()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var expected = data.Select(d => d.Name);
+
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                Name = t.Name
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<string>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public void QueryInt()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var expected = data.Select(d => d.Age);
+
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                Age = t.Age
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<int>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public void QueryNullableInt()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var expected = data.Select(d => (int?)d.Age);
+
+            var serializable = data.Select(t => new TestData.Timekeeper
+            {
+                Age = t.Age
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<int?>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public void QueryNullableDateTime()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var expected = data.Select(d => d.DateOfBirth);
+
+            var serializable = data.Select(t => new TestData.SingleValueRow
+            {
+                Value = t.DateOfBirth?.ToString("yyyy-MM-dd") ?? ""
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<DateTime?>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
+        [Theory, AutoData]
+        public void QueryEnum(IEnumerable<Size> sizes)
+        {
+            // Arrange
+            var expected = sizes;
+
+            var serializable = sizes.Select(v => new TestData.SingleValueRow
+            {
+                Value = ((int)v).ToString()
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.Query2<Size>("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public void QueryDict()
+        {
+            // Arrange
+            var data = GenerateData(3);
+            var expected = data.Select(d =>
+            {
+                return new Dictionary<string, string>
+                {
+                    { nameof(d.Name), d.Name },
+                    { nameof(d.Age), d.Age.ToString() },
+                    { nameof(d.DateOfBirth), d.DateOfBirth?.ToString("yyyy-MM-dd") }
+                };
+            });
+
+            var serializable = data.Select(v => new TestData.Timekeeper
+            {
+                Name = v.Name,
+                Age = v.Age,
+                DateOfBirth = v.DateOfBirth?.ToString("yyyy-MM-dd") ?? ""
+            }).ToList();
+
+            var xml = Serialize(serializable);
+
+            var service = new MockTransactionService(xml);
+
+            // Act
+            var actual = service.QueryT("").ToList();
+
+            // Assert
+            actual.Should().BeEquivalentTo(expected);
+        }
+
+        // Nullable int
+        // DateTime
+        // Nullable DateTime
 
         static List<TimekeeperProp> GenerateData(int size)
         {
@@ -144,6 +343,17 @@ namespace Tests
             var serializer = new XmlSerializer(typeof(Tests.TestData.Data));
             using var textWriter = new StringWriter();
             serializer.Serialize(textWriter, new Tests.TestData.Data { Timekeepers = data }, ns);
+            return textWriter.ToString();
+        }
+
+
+        static string Serialize(List<Tests.TestData.SingleValueRow> data)
+        {
+            var ns = new XmlSerializerNamespaces();
+            ns.Add("", "");
+            var serializer = new XmlSerializer(typeof(Tests.TestData.SingleValueData));
+            using var textWriter = new StringWriter();
+            serializer.Serialize(textWriter, new Tests.TestData.SingleValueData { Rows = data }, ns);
             return textWriter.ToString();
         }
     }
@@ -212,6 +422,13 @@ namespace Tests
             return value is string s ? new MatterNumber(s) : null;
         }
     }
+
+    public enum Size
+    {
+        Small = 0,
+        Medium,
+        Large
+    }
 }
 
 namespace Tests.TestData
@@ -238,5 +455,18 @@ namespace Tests.TestData
             $"Age: {Age}, " +
             $"Date of birth: {DateOfBirth}, " +
             $"Matter number: {MatterNumber}";
+    }
+
+    [XmlRoot(ElementName = "Data")]
+    public class SingleValueData
+    {
+        [XmlElement(ElementName = "Timekeeper")]
+        public List<SingleValueRow> Rows { get; set; }
+    }
+
+    [XmlType(TypeName = "Row")]
+    public class SingleValueRow
+    {
+        public string Value { get; set; }
     }
 }
